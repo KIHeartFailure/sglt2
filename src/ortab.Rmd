@@ -1,0 +1,70 @@
+```{r ortab, cache=cacheon}
+
+myor <- function(xvar) {
+  nval <- ifelse(is.factor(pdata %>% pull(!!sym(xvar))), nlevels(pdata %>% pull(!!sym(xvar))), 2)
+
+  cmod <- my.glm.mids(formula(paste0("ddr_sglt2 == 'Yes' ~ ", xvar)),
+    family = binomial(link = "logit"), data = imp
+  )
+
+  scmod <- summary(pool(cmod))
+
+  p <- dF(scmod$p.value[2:nval], dig = 3, p = TRUE)
+
+  ortmp <- cbind(as.character(scmod$term[2:nval]), paste0(
+    dF(exp(scmod$estimate[2:nval]), dig = 2),
+    " (", dF(exp(scmod$estimate[2:nval] - z05 * scmod$std.error[2:nval]), dig = 2),
+    "-", dF(exp(scmod$estimate[2:nval] + z05 * scmod$std.error[2:nval]), dig = 2), "), ",
+    p
+  ))
+  if (exists("ortab")) {
+    ortab <<- rbind(ortab, ortmp)
+  } else {
+    ortab <<- ortmp
+  }
+}
+
+if (exists("ortab")) rm(ortab, envir = .GlobalEnv)
+for (i in seq_along(modvars)) {
+  myor(modvars[i])
+}
+colnames(ortab) <- c("varstmp", "Crude")
+
+cmodadj <- my.glm.mids(formula(paste0("ddr_sglt2 == 'Yes' ~ ", paste(modvars, collapse = " + "))),
+  family = binomial(link = "logit"), data = imp
+)
+
+scmodadj <- summary(pool(cmodadj))
+
+nval <- length(scmodadj$estimate)
+
+padj <- dF(scmodadj$p.value[2:nval], dig = 3, p = TRUE)
+
+ortabadj <- cbind(
+  as.character(scmodadj$term[2:nval]),
+  paste0(
+    dF(exp(scmodadj$estimate[2:nval]), dig = 2),
+    " (", dF(exp(scmodadj$estimate[2:nval] - z05 * scmodadj$std.error[2:nval]), dig = 2),
+    "-", dF(exp(scmodadj$estimate[2:nval] + z05 * scmodadj$std.error[2:nval]), dig = 2), "), ",
+    padj
+  )
+)
+
+colnames(ortabadj) <- c("varstmp", "Adjusted")
+
+ortaball <- full_join(data.frame(ortab), data.frame(ortabadj), by = "varstmp")
+
+colnames(ortaball) <- sanitizeTextFunc(c("Variable", "Crude OR (95% CI), p-value", "Adjusted OR (95% CI), p-value"))
+
+write.xlsx(ortaball, paste0("./output/tabs/ortab_", Sys.Date(), ".xlsx"), rowNames = FALSE)
+
+ortaball <- ortaball %>% mutate(Variable = sanitizeTextFunc(Variable))
+
+mykable(ortaball,
+  fontsize = 8,
+  caption = paste0("Odds Ratios - associations with SGLT2"),
+  longtable = TRUE,
+  escape = FALSE
+) %>%
+  landscape()
+```
