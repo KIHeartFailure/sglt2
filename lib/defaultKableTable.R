@@ -11,7 +11,7 @@ mykable <- function(tab, fontsize = NULL, scale_down = TRUE, rownames = FALSE, .
     booktabs = TRUE,
     linesep = "",
     row.names = rownames,
-    align = c(rep("l", ncol(tab))),
+    align = rep("l", ncol(tab)),
     ...
   ) %>%
     kable_styling(
