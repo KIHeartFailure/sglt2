@@ -3,20 +3,54 @@
 myor <- function(xvar) {
   nval <- ifelse(is.factor(pdata %>% pull(!!sym(xvar))), nlevels(pdata %>% pull(!!sym(xvar))), 2)
 
-  cmod <- my.glm.mids(formula(paste0("ddr_sglt2 == 'Yes' ~ ", xvar)),
-    family = binomial(link = "logit"), data = imp
-  )
+  cmod <- with(imp, glm(formula(paste0("ddr_sglt2 == 'Yes' ~ ", xvar)),
+    family = binomial(link = "logit")
+  ))
 
   scmod <- summary(pool(cmod))
 
   p <- dF(scmod$p.value[2:nval], dig = 3, p = TRUE)
 
-  ortmp <- cbind(as.character(scmod$term[2:nval]), paste0(
-    dF(exp(scmod$estimate[2:nval]), dig = 2),
-    " (", dF(exp(scmod$estimate[2:nval] - z05 * scmod$std.error[2:nval]), dig = 2),
-    "-", dF(exp(scmod$estimate[2:nval] + z05 * scmod$std.error[2:nval]), dig = 2), "), ",
+  ortmp <- cbind(
+    as.character(scmod$term[2:nval]), paste0(
+      dF(exp(scmod$estimate[2:nval]), dig = 2),
+      " (", dF(exp(scmod$estimate[2:nval] - z05 * scmod$std.error[2:nval]), dig = 2),
+      "-", dF(exp(scmod$estimate[2:nval] + z05 * scmod$std.error[2:nval]), dig = 2), ")"
+    ),
     p
-  ))
+  )
+
+  if (nval > 2) {
+    poverall <- with(imp, car::Anova(glm(formula(paste0("ddr_sglt2 == 'Yes' ~ ", xvar)),
+      family = binomial(link = "logit")
+    ),
+    type = "III", test.statistic = "Wald"
+    ))
+
+    chis2 <- c(
+      poverall$analyses[[1]]$Chisq[2],
+      poverall$analyses[[2]]$Chisq[2],
+      poverall$analyses[[3]]$Chisq[2],
+      poverall$analyses[[4]]$Chisq[2],
+      poverall$analyses[[5]]$Chisq[2],
+      poverall$analyses[[6]]$Chisq[2],
+      poverall$analyses[[7]]$Chisq[2],
+      poverall$analyses[[8]]$Chisq[2],
+      poverall$analyses[[9]]$Chisq[2],
+      poverall$analyses[[10]]$Chisq[2]
+    )
+
+    dk.comb <- dF(miceadds::micombine.chisquare(
+      dk = chis2, df = poverall$analyses[[1]]$Df[2],
+      display = FALSE
+    )[2], dig = 3, p = TRUE)
+
+    ortmp <- rbind(
+      cbind(xvar, NA, dk.comb),
+      ortmp
+    )
+  }
+
   if (exists("ortab")) {
     ortab <<- rbind(ortab, ortmp)
   } else {
@@ -28,11 +62,15 @@ if (exists("ortab")) rm(ortab, envir = .GlobalEnv)
 for (i in seq_along(modvars)) {
   myor(modvars[i])
 }
-colnames(ortab) <- c("varstmp", "Crude")
+colnames(ortab) <- c("Variable", "CrudeOR", "p")
 
-cmodadj <- my.glm.mids(formula(paste0("ddr_sglt2 == 'Yes' ~ ", paste(modvars, collapse = " + "))),
-  family = binomial(link = "logit"), data = imp
-)
+cmodadj <- with(imp, glm(formula(paste0(
+  "ddr_sglt2 == 'Yes' ~ ",
+  paste(modvars, collapse = " + ")
+)),
+family = binomial(link = "logit")
+))
+
 
 scmodadj <- summary(pool(cmodadj))
 
@@ -45,26 +83,65 @@ ortabadj <- cbind(
   paste0(
     dF(exp(scmodadj$estimate[2:nval]), dig = 2),
     " (", dF(exp(scmodadj$estimate[2:nval] - z05 * scmodadj$std.error[2:nval]), dig = 2),
-    "-", dF(exp(scmodadj$estimate[2:nval] + z05 * scmodadj$std.error[2:nval]), dig = 2), "), ",
-    padj
-  )
+    "-", dF(exp(scmodadj$estimate[2:nval] + z05 * scmodadj$std.error[2:nval]), dig = 2), ")"
+  ),
+  padj
 )
 
-colnames(ortabadj) <- c("varstmp", "Adjusted")
 
-ortaball <- full_join(data.frame(ortab), data.frame(ortabadj), by = "varstmp")
+colnames(ortabadj) <- c("Variable", "AdjustedOR", "p")
 
-colnames(ortaball) <- sanitizeTextFunc(c("Variable", "Crude OR (95% CI), p-value", "Adjusted OR (95% CI), p-value"))
+poveralladj <- with(imp, car::Anova(glm(formula(paste0(
+  "ddr_sglt2 == 'Yes' ~ ",
+  paste(modvars, collapse = " + ")
+)),
+family = binomial(link = "logit")
+), type = "III", test.statistic = "Wald"))
+
+lev3vars <- modvars[pdata %>%
+  select(!!!syms(modvars)) %>%
+  sapply(nlevels) > 2]
+
+poverall <- cbind(lev3vars, rep(NA, length(lev3vars)), rep(NA, length(lev3vars)))
+for (i in seq_along(lev3vars)) {
+  chis2 <- c(
+    poveralladj$analyses[[1]][lev3vars[i], "Chisq"],
+    poveralladj$analyses[[2]][lev3vars[i], "Chisq"],
+    poveralladj$analyses[[3]][lev3vars[i], "Chisq"],
+    poveralladj$analyses[[4]][lev3vars[i], "Chisq"],
+    poveralladj$analyses[[5]][lev3vars[i], "Chisq"],
+    poveralladj$analyses[[6]][lev3vars[i], "Chisq"],
+    poveralladj$analyses[[7]][lev3vars[i], "Chisq"],
+    poveralladj$analyses[[8]][lev3vars[i], "Chisq"],
+    poveralladj$analyses[[9]][lev3vars[i], "Chisq"],
+    poveralladj$analyses[[10]][lev3vars[i], "Chisq"]
+  )
+
+  poverall[i, 3] <- dF(miceadds::micombine.chisquare(
+    dk = chis2, df = poveralladj$analyses[[1]][i, "Df"],
+    display = FALSE
+  )[2], dig = 3, p = TRUE)
+}
+
+ortabadj <- rbind(ortabadj, poverall)
+
+ortaball <- full_join(data.frame(ortab), data.frame(ortabadj), by = "Variable")
 
 write.xlsx(ortaball, paste0("./output/tabs/ortab_", Sys.Date(), ".xlsx"), rowNames = FALSE)
 
 ortaball <- ortaball %>% mutate(Variable = sanitizeTextFunc(Variable))
 
+colnames(ortaball) <- sanitizeTextFunc(c("Variable", rep(c("OR (95% CI)", "p-value"), 2)))
+
+myHeader <- c(" " = 1, "Crude" = 2, "Adjusted" = 2)
+names(myHeader) <- c(" ", "Crude", "Adjusted")
+
+
 mykable(ortaball,
-  fontsize = 8,
+  fontsize = 6,
   caption = paste0("Odds Ratios - associations with SGLT2"),
   longtable = TRUE,
   escape = FALSE
 ) %>%
-  landscape()
+  add_header_above(myHeader)
 ```

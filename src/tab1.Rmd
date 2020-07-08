@@ -3,8 +3,7 @@
 tab1_tmp <- CreateTableOne(
   vars = tabvars,
   strata = "ddr_sglt2",
-  data = pdata,
-  smd = TRUE
+  data = pdata
 )
 tab1 <- print(tab1_tmp,
   varLabels = TRUE, missing = TRUE, printToggle = FALSE, nonnormal = tabvars,
@@ -17,8 +16,7 @@ tab1 <- print(tab1_tmp,
 tab1m_tmp <- CreateTableOne(
   vars = tabvars,
   strata = "ddr_sglt2",
-  data = matchp,
-  smd = TRUE
+  data = matchp
 )
 tab1m <- print(tab1m_tmp,
   varLabels = TRUE, missing = TRUE, printToggle = FALSE, nonnormal = tabvars,
@@ -29,7 +27,7 @@ tab1m <- print(tab1m_tmp,
 )
 
 tab1out <- as_tibble(cbind(rownames(tab1), tab1[, 6], tab1[, c(1:2, 5, 3)], tab1m[, 6], tab1m[, c(1:2, 5, 3)]))
-#tab1out <- as_tibble(cbind(rownames(tab1), tab1[, 6], tab1[, c(1:2, 5, 3)]))
+# tab1out <- as_tibble(cbind(rownames(tab1), tab1[, 6], tab1[, c(1:2, 5, 3)]))
 
 tab1out <- tab1out %>%
   mutate(
@@ -77,11 +75,12 @@ footnote(
     landscape() %>%
     add_header_above(myHeader),
   general = c(
-    "Categorical variables are presented with n (%) and tested with chi-square test and continuous variables with median [q1-q3] and tested with Mann-Whitney U test."
+    "Categorical variables are presented with n (%) and tested with chi-square test and continuous variables with median [q1-q3] and tested with Mann-Whitney U test.",
+    "SMD = Standardized mean difference."
   ),
   symbol = c(
     "arb/acei/arni",
-    "Included in the multiple imputation model (althought not necessarily imputed if there is no missing data) and models."
+    "Included in the multiple imputation model (althought not necessarily imputed if there is no missing data) and logistic/cox models."
   )
 )
 ```

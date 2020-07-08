@@ -1,12 +1,16 @@
 ```{r outtab, cache=cacheon}
-survmy <- function(time, event, eventname, data, matched = FALSE,
-                   sensanalysis = FALSE, fg = FALSE) {
+survmy <- function(time = NULL, time1, time2, event, eventname, data, matched = FALSE,
+                   sensanalysis = FALSE, fg = FALSE, surv = TRUE) {
   tmpdata <- data
 
   if (sensanalysis) {
     tmpnrow <- 1
   } else {
-    tmpnrow <- 7
+    if (surv) {
+      tmpnrow <- 8
+    } else {
+      tmpnrow <- 4
+    }
   }
 
   out <- data.frame(matrix(NA, ncol = 4, nrow = tmpnrow))
@@ -15,37 +19,38 @@ survmy <- function(time, event, eventname, data, matched = FALSE,
   colnames(out) <- c("Outcome", "Model", "SGLT2 No", "SGLT2 Yes")
 
   if (!sensanalysis) {
-    ## mort (from survfit)
-    fit <- survfit(formula(paste0("Surv(", time, ",", event, "=='Yes') ~ ddr_sglt2")),
-      data = tmpdata
-    )
+    if (surv) {
+      ## mort (from survfit)
+      fit <- survfit(formula(paste0("Surv(", time, ",", event, "=='Yes') ~ ddr_sglt2")),
+        data = tmpdata
+      )
 
-    sfit <- summary(fit, times = c(30, 60, 90, 365))
+      sfit <- summary(fit, times = c(30, 60, 90, 365))
 
-    if (length(sfit$surv) != 8) {
-      stop("not enough follow-up time for all time points, CHECK!!!!")
+      if (length(sfit$surv) != 8) {
+        stop("not enough follow-up time for all time points, CHECK!!!!")
+      }
+
+      out[1:4, 2] <- paste("% (95% CI)", c(30, 60, 90, 365), "days")
+
+      out[1:4, 3:4] <- paste0(
+        dF(100 - sfit$surv * 100, dig = 0), " (",
+        dF(100 - sfit$upper * 100, dig = 0), "-",
+        dF(100 - sfit$lower * 100, dig = 0), ")"
+      )
     }
 
-    out[1:4, 2] <- paste("% (95% CI)", c(30, 60, 90, 365), "mo")
-
-    out[1:4, 3:4] <- paste0(
-      dF(100 - sfit$surv * 100, dig = 0), " (",
-      dF(100 - sfit$upper * 100, dig = 0), "-",
-      dF(100 - sfit$lower * 100, dig = 0), ")"
-    )
-
     ## incidence rate
-    out[5, 2] <- "Incidence (no events, sum py, rate/1000py (95% CI))"
+    out[tmpnrow - 3, 2] <- "Incidence"
 
-    tmpdata$eventcount <- tmpdata[, event] == "Yes"
-    tmpdata <- tmpdata %>% mutate(eventcount = ifelse(eventcount, 1, 0))
-
-
+    tmpdata <- tmpdata %>%
+      mutate(eventcount = if_else(!!sym(event) == "Yes", 1, 0))
+    
     ev <- by(tmpdata$eventcount, tmpdata[, "ddr_sglt2"], sum)
     s <- by(tmpdata[, time], tmpdata[, "ddr_sglt2"], sum) / 365.25
     r <- pois.exact(x = ev, pt = s / 1000)
 
-    out[5, 3:4] <- paste0(
+    out[tmpnrow - 3, 3:4] <- paste0(
       ev, ", ",
       dF(s, dig = 0), ", ",
       dF(r$rate, dig = 0), " (",
@@ -61,19 +66,18 @@ survmy <- function(time, event, eventname, data, matched = FALSE,
         data = tmpdata
       )
       smod <- summary(mod)
-      out[6, 2] <- "Crude HR (95% CI), p-value"
-      out[6, 3:4] <- c("ref", paste0(
+      out[tmpnrow - 2, 2] <- "Crude HR (95% CI), p-value"
+      out[tmpnrow - 2, 3:4] <- c("ref", paste0(
         dF(smod$conf.int[1, 1], dig = 2),
         " (", dF(smod$conf.int[1, 3], dig = 2),
         "-", dF(smod$conf.int[1, 4], dig = 2), "), ",
         dF(smod$coef[1, 5], dig = 3, p = TRUE)
       ))
 
-      # adjusted
-
+      # adjusted individual covariates
       amod <- my.coxph.mids(formula(paste0(
         "Surv(", time, ",", event, " == 'Yes') ~ ddr_sglt2 +",
-        paste(modvarsns, collapse = " + ")
+        paste(modvarsstrata, collapse = " + ")
       )),
       data = imp
       )
@@ -85,36 +89,60 @@ survmy <- function(time, event, eventname, data, matched = FALSE,
           (amod$analyses[[1]]$nevent - length(amod$analyses[[1]]$coefficients))
       ))
 
-      out[7, 2] <- "Adj HR (95% CI), p-value"
-      out[7, 3:4] <- c("ref", paste0(
+      out[tmpnrow - 1, 2] <- "Adj (ind vars) HR (95% CI), p-value"
+      out[tmpnrow - 1, 3:4] <- c("ref", paste0(
         dF(exp(asmod$estimate[1]), dig = 2),
         " (", dF(exp(asmod$estimate[1] - z05 * asmod$std.error[1]), dig = 2),
         "-", dF(exp(asmod$estimate[1] + z05 * asmod$std.error[1]), dig = 2), "), ",
         dF(asmod$p.value[1], dig = 3, p = TRUE)
+      ))
+
+      # adjusted ps
+      mod <- coxph(formula(paste0("Surv(", time, ",", event, "=='Yes') ~ ddr_sglt2 + ns(ps, 4)")),
+        data = tmpdata
+      )
+      smod <- summary(mod)
+      out[tmpnrow, 2] <- "Adj (ps) HR (95% CI), p-value"
+      out[tmpnrow, 3:4] <- c("ref", paste0(
+        dF(smod$conf.int[1, 1], dig = 2),
+        " (", dF(smod$conf.int[1, 3], dig = 2),
+        "-", dF(smod$conf.int[1, 4], dig = 2), "), ",
+        dF(smod$coef[1, 5], dig = 3, p = TRUE)
       ))
     }
   }
 
   if (matched) {
     if (!fg) {
-      mod <- coxme(formula(paste0("Surv(", time, ",", event, "=='Yes') ~ ddr_sglt2 + (1|par)")),
-        data = tmpdata
-      )
+      if (!is.null(time)) {
+        mod <- coxph(formula(paste0("Surv(", time, ",", event, "=='Yes') ~ ddr_sglt2 + frailty(par)")),
+          data = tmpdata
+        )
 
-      se <- sqrt(vcov(mod))
+        smod <- summary(mod)
 
-      # P-value
-      zp <- mod$coeff / se
-      p <- dF((1 - pnorm(abs(zp))) * 2, dig = 3, p = TRUE)
+        out[tmpnrow, 2] <- "Adj HR (95% CI), p-value"
+        out[tmpnrow, 3:4] <- c("ref", paste0(
+          dF(smod$conf.int[1, 1], dig = 2),
+          " (", dF(smod$conf.int[1, 3], dig = 2),
+          "-", dF(smod$conf.int[1, 4], dig = 2), "), ",
+          dF(smod$coef[1, 6], dig = 3, p = TRUE)
+        ))
+      }
+      if (is.null(time)) {
+        mod <- coxph(formula(paste0("Surv(start, stop,", event, "=='Yes') ~ ddr_sglt2 + frailty(par)")),
+          data = tmpdata
+        )
+        smod <- summary(mod)
 
-      out[tmpnrow, 2] <- "Adj HR (95% CI), p-value"
-
-      out[tmpnrow, 3:4] <- c("ref", paste0(
-        dF(exp(mod$coeff), dig = 2),
-        " (", dF(exp(mod$coef - z05 * se), dig = 2),
-        "-", dF(exp(mod$coef + z05 * se), dig = 2), "), ",
-        p
-      ))
+        out[tmpnrow, 2] <- "Adj HR (95% CI), p-value"
+        out[tmpnrow, 3:4] <- c("ref", paste0(
+          dF(smod$conf.int[1, 1], dig = 2),
+          " (", dF(smod$conf.int[1, 3], dig = 2),
+          "-", dF(smod$conf.int[1, 4], dig = 2), "), ",
+          dF(smod$coef[1, 6], dig = 3, p = TRUE)
+        ))
+      }
     }
     if (fg) {
       mod <- summary(z <- crr(tmpdata %>% pull(!!sym(time)),
@@ -146,8 +174,8 @@ empty_func <- function(nrowmy = 3) {
 }
 
 survmy2 <- function(time2, event2, eventname2,
-                    time2_cross, event2_cross,
-                    event2_comp) {
+                    crossoverdata,
+                    event_comp) {
   out1 <- survmy(
     time = time2, event = event2,
     eventname = eventname2,
@@ -159,27 +187,73 @@ survmy2 <- function(time2, event2, eventname2,
     data = matchp, matched = TRUE
   )
   out3 <- survmy(
-    time = time2_cross, event = event2_cross,
-    eventname = paste0("Consistency - ", eventname2, " sglt2 crossover censored"),
-    data = matchp, matched = TRUE, sensanalysis = TRUE
+    time = NULL, event = event2,
+    eventname = paste0("Consistency - ", eventname2, ", sglt2 timedep"),
+    data = crossoverdata, matched = TRUE, sensanalysis = TRUE
   )
-  out4 <- survmy(
-    time = time2, event = event2,
-    eventname = paste0("Consistency - ", eventname2, "  excl NT-proBNP"),
-    data = matchp_sens, matched = TRUE, sensanalysis = TRUE
-  )
-  if (!is.null(event2_comp)) {
-    out5 <- survmy(
-      time = time2, event = event2_comp,
-      eventname = paste0("Consistency - ", eventname2, "   death as competing event"),
+  if (!is.null(event_comp)) {
+    out4 <- survmy(
+      time = time2, event = event_comp,
+      eventname = paste0("Consistency - ", eventname2, ", death as comp event"),
       data = matchp, matched = TRUE, sensanalysis = TRUE,
       fg = TRUE
     )
-  } 
+  }
+  out1_30 <- survmy(
+    time = paste0(time2, "_30"), event = paste0(event2, "_30"),
+    eventname = paste0(eventname2, " 30d"),
+    data = pdata, surv = FALSE
+  )
+  out2_30 <- survmy(
+    time = paste0(time2, "_30"), event = paste0(event2, "_30"),
+    eventname = paste0(eventname2, " 30d"),
+    data = matchp, matched = TRUE, surv = FALSE
+  )
+  out1_60 <- survmy(
+    time = paste0(time2, "_60"), event = paste0(event2, "_60"),
+    eventname = paste0(eventname2, " 60d"),
+    data = pdata, surv = FALSE
+  )
+  out2_60 <- survmy(
+    time = paste0(time2, "_60"), event = paste0(event2, "_60"),
+    eventname = paste0(eventname2, " 60d"),
+    data = matchp, matched = TRUE, surv = FALSE
+  )
+  out1_90 <- survmy(
+    time = paste0(time2, "_90"), event = paste0(event2, "_90"),
+    eventname = paste0(eventname2, " 90d"),
+    data = pdata, surv = FALSE
+  )
+  out2_90 <- survmy(
+    time = paste0(time2, "_90"), event = paste0(event2, "_90"),
+    eventname = paste0(eventname2, " 90d"),
+    data = matchp, matched = TRUE, surv = FALSE
+  )
+  out1_365 <- survmy(
+    time = paste0(time2, "_365"), event = paste0(event2, "_365"),
+    eventname = paste0(eventname2, " 365d"),
+    data = pdata, surv = FALSE
+  )
+  out2_365 <- survmy(
+    time = paste0(time2, "_365"), event = paste0(event2, "_365"),
+    eventname = paste0(eventname2, " 365d"),
+    data = matchp, matched = TRUE, surv = FALSE
+  )
 
-  all <- rbind(out1, empty_func(ifelse(!is.null(event2_comp), 3, 2)))
-  if (!is.null(event2_comp)) {match <- rbind(out2, out3, out4, out5)} else{
-    match <- rbind(out2, out3, out4)
+  all <- rbind(
+    out1, empty_func(ifelse(!is.null(event_comp), 2, 1)),
+    out1_30, out1_60, out1_90, out1_365 
+  )
+  if (!is.null(event_comp)) {
+    match <- rbind(
+      out2, out3, out4,
+      out2_30, out2_60, out2_90, out2_365
+    )
+  } else {
+    match <- rbind(
+      out2, out3,
+      out2_30, out2_60, out2_90, out2_365
+    )
   }
 
   outall <- cbind(
@@ -193,59 +267,62 @@ survmy2 <- function(time2, event2, eventname2,
 cvdeathhfhosp <- survmy2(
   time2 = "sos_outtime_hosphf",
   event2 = "sos_out_deathcvhosphf",
-  eventname2 = "CVD/first HF hospitalization",
-  time2_cross = "sos_outtime_hosphf_sglt2",
-  event2_cross = "sos_out_deathcvhosphf_sglt2",
-  event2_comp = "sos_out_deathcvhosphf_comp"
+  eventname2 = "CVD/1 HF hosp",
+  crossoverdata = matchpcross_deathcvhosphf,
+  event_comp = "sos_out_deathcvhosphf_comp"
+)
+
+deathhfhosp <- survmy2(
+  time2 = "sos_outtime_hosphf",
+  event2 = "sos_out_deathhosphf",
+  eventname2 = "All-cause mortality/1 HF hosp",
+  crossoverdata = matchpcross_deathhosphf,
+  event_comp = NULL
 )
 
 death <- survmy2(
   time2 = "sos_outtime_death",
   event2 = "sos_out_death",
   eventname2 = "All-cause mortality",
-  time2_cross = "sos_outtime_death_sglt2",
-  event2_cross = "sos_out_death_sglt2",
-  event2_comp = NULL
+  crossoverdata = matchpcross_death,
+  event_comp = NULL
 )
 
 cvdeath <- survmy2(
   time2 = "sos_outtime_death",
   event2 = "sos_out_deathcv",
   eventname2 = "CV mortality",
-  time2_cross = "sos_outtime_death_sglt2",
-  event2_cross = "sos_out_deathcv_sglt2",
-  event2_comp = "sos_out_deathcv_comp"
+  crossoverdata = matchpcross_deathcv,
+  event_comp = "sos_out_deathcv_comp"
 )
 
 hfhosp <- survmy2(
   time2 = "sos_outtime_hosphf",
   event2 = "sos_out_hosphf",
-  eventname2 = "First HF hospitalization",
-  time2_cross = "sos_outtime_hosphf_sglt2",
-  event2_cross = "sos_out_hosphf_sglt2",
-  event2_comp = "sos_out_hosphf_comp"
+  eventname2 = "1 HF hosp",
+  crossoverdata = matchpcross_hosphf,
+  event_comp = "sos_out_hosphf_comp"
 )
 
 cvhosp <- survmy2(
   time2 = "sos_outtime_hospcv",
   event2 = "sos_out_hospcv",
-  eventname2 = "First CV hospitalization",
-  time2_cross = "sos_outtime_hospcv_sglt2",
-  event2_cross = "sos_out_hospcv_sglt2",
-  event2_comp = "sos_out_hospcv_comp"
+  eventname2 = "1 CV hosp",
+  crossoverdata = matchpcross_hospcv,
+  event_comp = "sos_out_hospcv_comp"
 )
 
 cvdmis <- survmy2(
-  time2 = "sos_outtime_hospmistroketia",
-  event2 = "sos_out_deathcvhospmistroketia",
-  eventname2 = "CVD/first hospitalization for mi/stroke",
-  time2_cross = "sos_outtime_hospmistroketia_sglt2",
-  event2_cross = "sos_out_deathcvhospmistroketia_sglt2",
-  event2_comp = "sos_out_deathcvhospmistroketia_comp"
+  time2 = "sos_outtime_hospmistroke",
+  event2 = "sos_out_deathcvhospmistroke",
+  eventname2 = "CVD/1 hosp for mi/stroke",
+  crossoverdata = matchpcross_deathcvhospmistroke,
+  event_comp = "sos_out_deathcvhospmistroke_comp"
 )
 
 outall <- rbind(
   cvdeathhfhosp,
+  deathhfhosp,
   death,
   cvdeath,
   hfhosp,
@@ -260,10 +337,16 @@ myHeader <- c(" " = 1, " " = 1, "All" = 2, "Matched" = 2)
 names(myHeader) <- c(" ", " ", "All", "Matched")
 
 
-mykable(outall,
+footnote(mykable(outall,
   fontsize = 6,
-  caption = "Outcomes"
+  caption = "Outcomes",
+  longtable = TRUE
 ) %>%
   landscape() %>%
-  add_header_above(myHeader)
+  add_header_above(myHeader),
+  general = c(
+    "Incidence =  no events, sum py, rate/1000py (95% CI).",
+    "Adj (ind vars) = Adjusted for the individual variables indicated in the baseline table.",
+    "Adj (ps) = Adjusted for the propensity scrore as a covariate using a cubic spline with 4 df in All data./Including the matched pairs as a frailty term in the Matched data."
+  ))
 ```

@@ -1,18 +1,14 @@
 
 ProjectTemplate::reload.project()
 
-# variables that should be presented in tables and included in models
-source("./src/vars_for_tabs_mods.R")
-
-dataass <- mice::complete(imp, 7)
+dataass <- mice::complete(imp, 6)
 
 
 # Cox regression ----------------------------------------------------------
 
-
 mod <- coxph(formula(paste0(
-  "Surv(timeTodeath, death == 'yes') ~ clinic +", paste(modvars, collapse = " + ")
-)), data = dataass)
+  "Surv(sos_outtime_hosphf, sos_out_deathcvhosphf == 'Yes') ~ ddr_sglt2 +",
+  paste(modvars, collapse = " + "))), data = dataass)
 
 
 # Checking for non-prop hazards -------------------------------------------
@@ -20,23 +16,22 @@ mod <- coxph(formula(paste0(
 print(testpat <- cox.zph(mod))
 (sig <- testpat$table[testpat$table[, 3] < 0.05, ])
 
-# check spec for clinic, ok
-ggcoxzph(testpat[1]) 
+# check spec for sglt2, ok
+survminer::ggcoxzph(testpat[1]) 
+plot(testpat[1])
 
 # check for vars with most sig in most imps
-ggcoxzph(testpat[3])
-ggcoxzph(testpat[4])
-ggcoxzph(testpat[16])
-ggcoxzph(testpat[36])
+survminer::ggcoxzph(testpat[4])
+plot(testpat[4])
+plot(testpat[13])
+plot(testpat[14])
 
 # Checking for outliers ---------------------------------------------------
 
-ggcoxdiagnostics(mod,
+survminer::ggcoxdiagnostics(mod,
   type = "dfbeta",
   linear.predictions = FALSE, ggtheme = theme_bw()
 )
-
-ggcoxdiagnostics(mod, type = , linear.predictions = TRUE)
 
 
 # Checking for linearity ---------------------------------------------------
@@ -45,7 +40,7 @@ ggcoxdiagnostics(mod, type = , linear.predictions = TRUE)
 # No continous variables
 
 # Logistic regression -----------------------------------------------------
-modlm <- glm(formula(paste0("clinic == 'medicine' ~ ", paste(modvars, collapse = " + "))),
+modlm <- glm(formula(paste0("ddr_sglt2 == 'Yes' ~ ", paste(modvars, collapse = " + "))),
   family = binomial(link = "logit"), data = dataass
 )
 

@@ -27,17 +27,8 @@ pdata <- left_join(pdata,
 )
 
 cal <- c(0.01 / sd(pdata$ps))
-set.seed(2334325)
 
-match <- Match(
-  Tr = pdata$ddr_sglt2num,
-  X = pdata$ps,
-  estimand = "ATT",
-  caliper = cal,
-  replace = F,
-  ties = F,
-  M = 2
-)
+set.seed(2334325)
 match1 <- Match(
   Tr = pdata$ddr_sglt2num,
   X = pdata$ps,
@@ -47,6 +38,17 @@ match1 <- Match(
   ties = F,
   M = 1
 )
+set.seed(2334325)
+match2 <- Match(
+  Tr = pdata$ddr_sglt2num,
+  X = pdata$ps,
+  estimand = "ATT",
+  caliper = cal,
+  replace = F,
+  ties = F,
+  M = 2
+)
+set.seed(2334325)
 match3 <- Match(
   Tr = pdata$ddr_sglt2num,
   X = pdata$ps,
@@ -56,14 +58,35 @@ match3 <- Match(
   ties = F,
   M = 3
 )
-
+set.seed(2334325)
+match4 <- Match(
+  Tr = pdata$ddr_sglt2num,
+  X = pdata$ps,
+  estimand = "ATT",
+  caliper = cal,
+  replace = F,
+  ties = F,
+  M = 4
+)
+set.seed(2334325)
+match5 <- Match(
+  Tr = pdata$ddr_sglt2num,
+  X = pdata$ps,
+  estimand = "ATT",
+  caliper = cal,
+  replace = F,
+  ties = F,
+  M = 5
+)
 matchingn <- paste0(
   "1:1: N = ", match1$wnobs, ", ",
-  "1:2: N = ", match$wnobs, ", ",
-  "1:3: N = ", match3$wnobs
+  "1:2: N = ", match2$wnobs, ", ",
+  "1:3: N = ", match3$wnobs, ", ",
+  "1:4: N = ", match4$wnobs, ", ",
+  "1:5: N = ", match5$wnobs
 )
 
 pdata$par <- rep(NA, nrow(pdata))
 
-pdata$par[c(unique(match$index.treated), match$index.control)] <- c(1:match$wnobs, rep(1:match$wnobs, each = 2))
-matchp <- pdata[c(unique(match$index.treated), match$index.control), ]
+pdata$par[c(unique(match3$index.treated), match3$index.control)] <- c(1:match3$wnobs, rep(1:match3$wnobs, each = 3))
+matchp <- pdata[c(unique(match3$index.treated), match3$index.control), ]

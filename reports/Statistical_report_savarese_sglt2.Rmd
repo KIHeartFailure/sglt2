@@ -1,6 +1,5 @@
 ---
 title: 'Statistical report: Use of the inhibitors of sodium-glucose cotransporter 2 in patients with heart failure and type 2 diabetes mellitus'
-subtitle: 'DRAFT'
 author: 'Statistician: Lina Benson'
   
 date: "`r Sys.Date()`"
@@ -13,8 +12,6 @@ output:
 link-citations: yes
 bibliography: references.bib
 nocite: '@*'
-header-includes:
-   - \usepackage{draftwatermark}
 ---
 
 \newpage 
@@ -62,23 +59,15 @@ mykable(flow, caption = "Flowchart")
 
 First patient in: `r min(pdata$shf_indexdtm)` and last patient in: `r max(pdata$shf_indexdtm)`.  
 
-QUESTION: Took LAST post (not first as stated in the SAP) 
-since not index post anyway and last more probable to have sglt2. OK?
-
 ## Created variables 
 
-The antidiabetic treatments were derived from the Dispensed Drug Registry where 
-use was defined as dispensed drug within 5 months prior to index date (in SwedeHF) 
-up until 14 days after index date. The following ATC codes were used to define the
-respective treatments: 
+```{r outcodes}
+mykable(metaout, caption = "Additional outcomes from NPR")
+```
 
 ```{r atc}
 mykable(metalm, caption = "Treatments from DDR")
 ```
-
-QUESTION: Should any of the A10BD be placed in another treat? 
-
-QUESTION: ok with same time limit for other treats?
 
 # Statistical analysis 
 
@@ -93,34 +82,33 @@ comparisons were made and therefore the results should be viewed with some care.
 Missing data was imputed with multiple imputation using mice [@mice] for 10 
 datasets and 10 iterations. Variables included in the model are indicated in 
 Table \ref{tab:tab1}. The primary outcome, first heart failure hospitalization/CVD,
-was included as the Nelson-Aalen estimator. Sglt2 type is not included in the imputation model.  
+was included as the Nelson-Aalen estimator. Sglt2 use is not included in the imputation model.  
 
 ## Propensity scores
 
 A propensity score for treatment with sglt2 was estimated for each patient with 
-logistic regression for each of the 10 imputed datasets using with variables 
-indicated in Table \ref{tab:tab1}. Continuous variables were modeled using 
-cubic splines with 3 dfs. 1:2 matching without replacement [@match] 
+logistic regression for each of the 10 imputed datasets using the variables 
+indicated in Table \ref{tab:tab1}. 1:3 matching without replacement [@match] 
 was thereafter performed on the average of the resulting 10 ps [@psmatch]. Matching was 
 allowed if the propensity score differed by 0.01 or less. The ability of the ps 
 matching to balance the baseline characteristics was assessed by 
-standardized mean differences (the difference in percentage between the means for 
-the 2 groups divided by the mutual standard deviation). Standardized mean differences
-of less than <0.1% are considered inconsequential. 
+standardized mean differences.  
 
-1:1 and 1:3 matching was also attempted but taking into consideration the no of 
-patients retained 1:2 was deemed the best option
-`r matchingn`.
+1:3 has deemed the best option when taking into account the number of patients retained.
+Other matching ratios: `r matchingn`.
 
-QUESTION: Could abs try inverse prob weighing, but to be honest mi is a bloody problem so is nice
-to be rid of it by using matching...
+## SGLT2 over time
+
+The denominator is the population in the main analysis (N = `r nrow(pdata)`). 
+The numerator consists of the number of patients that have at least one sglt2 
+prescription. The calculation is done per year, so a patient without sglt2 
+at index in SwedeHF, for example 2017, might still be included in the numerator for example for 2013 or 2018.  
+
+```{r, child = "../src/overtime.Rmd"}
+
+```
 
 ## Baseline characteristics
-
-QUESTION: The covariates listed in the sap are not quite the same as presented in the table. Should I go by text or table?  
-QUESTION: Just to check: You write you want Ischemic stroke: ICD-10: I63. This is different to general dataset were defined as I60-I64, I690-694; ICD-9: 430-434, 438A-E. Should be ONLY I63?
-
-QUESTION: What is valvular interventions? Pci/cabg? So also included in ihd?
 
 ```{r, child = "../src/tab1.Rmd"}
 
@@ -130,14 +118,6 @@ QUESTION: What is valvular interventions? Pci/cabg? So also included in ihd?
 
 Odds ratios are estimated using logistic regression with SGLT2 use as outcome. 
 
-Note to self: If keep cont vars present in units of 10 ect. 
-
-Note to self: Add overall p for cat vars > 2 levels. 
-
-QUESTION: Should make further selection of variables 
-for adjusted model. This also applies to the ps model.
-Models are not converging proparly...
-
 ```{r, child = "../src/ortab.Rmd"}
 
 ```
@@ -145,41 +125,34 @@ Models are not converging proparly...
 ### Assumptions
 
 Outliers were investigated with Cook's distance and multicollinearity 
-with the variance inflation factor in the full model in the overall population. 
-Also check liniearity...
+with the variance inflation factor in the full model in the overall population.
+=> No action deemed necessary. 
 
-## Outcomes
-
-QUESTION: Outcome: cardiovascular death/myocardial infarction/stroke. In stroke is TIA included (so can use the outcome already defined in shfdb3)
+## Association SGLT2 vs outcomes
 
 The following outcomes are considered: 
 
-- Cardiovascular mortality/first HF hospitalization
+- Cardiovascular mortality/first HF hospitalization (primary endpoint)
+- All-cause mortality/first HF hospitalization
 - All-cause mortality
 - Cardiovascular mortality
 - First HF hospitalization
 - First cardiovascular hospitalization
 - Cardiovascular death/first hospitalization for myocardial infarction or stroke 
 
-The main analysis is the ps matched analysis including NT-proBNP with sglt2 
-according to the ITT principle. All analyses are on this population unless 
-stated otherwise. The primary endpoint is considered to be 
-first HF hospitalization/CVD. 
-
 Incidence per 1000 py was calculated with 95% Poisson confidence intervals. 
 
-The first HF hospitalization/CVD is presented with the 1 - Kaplan-Meier curve
+The Cardiovascular mortality/first HF hospitalization and 
+All-cause mortality/first HF hospitalization are presented with the 1 - Kaplan-Meier curves
 and tested with the log-rank test for the matched population 
 (note that the log-rank test is theoretically 
 redundant since the cox regression gives the same information). 
 
-QUESTION: KM curves for other outcomes?
-
-QUESTION: 1-KM curves (and corresponding numbers for EVENT (not surv) at 30, 60 days ect) or suvival?
-
 Cox proportional hazards regressions were used to evaluate the association 
-between sglt2 and the respective outcomes. Data were censored at 2018-12-31 
-or death, so this assumes that the risk of cv mortality and hf hospitalization 
+between sglt2 and the respective outcomes. 
+
+Data were censored at 2018-12-31 
+or death/emigration, so this assumes that the risk of cv mortality and hf hospitalization 
 would have been the same for a censored patient had the censoring not occurred. 
 In the matched cohort the matched pairs were modeled using a frailty term. 
 
@@ -188,36 +161,25 @@ In the matched cohort the matched pairs were modeled using a frailty term.
 #### Crossover
 
 In the main analysis sglt2 use is considered according to the ITT principle 
-(sglt2 at baseline). As a consistency analysis patients were censored at crossover. 
-In untreated patients, crossover was defined as a new sglt2 dispension 
-in the Dispensed Drug Registry and for treated patients crossover was defined 
-as no sglt2 dispension within 6 months from baseline or from last dispension, 
-where crossover was set 3 months from index or last refill. 
+(sglt2 at baseline). As a consistency analysis sglt2 was included as a 
+time-dependent variable in the model. 
 
-QUESTION: We could do a time dependent analysis instead of censoring 
-but since problematic to define exact cross-over for users might not be very 
-accurate... so perhaps not worth the hassle...
-
-#### Excluding NT-proBNP QUESTION: DO THIS?
-
-Since the % missing observations with NT-proBNP was high, analyses were also 
-performed excluding NT-proBNP in the imputation, matching and outcomes analyses 
-resulting in N = `r matchp_sens %>% filter(ddr_sglt2 == "Yes") %>% count()`
-matched patients with sglt2.  
+In patients treated with sglt2 at baseline the patient was assumed to be on sglt2 
+until LAST dispension + 3 months or end of follow-up 
+(death/emigration/2018-08-01/event) - 5 months independent of how 
+long time between dispensions. In untreated patients, crossover was defined 
+as a new sglt2 dispension in the Dispensed Drug Registry and 
+thereafter in the same manner as for patients treated with sglt2 at baseline. 
+That means that patients with sglt2 at baseline were allowed to cross 
+over max once (Yes-No) and patients without sglt2 at baseline were 
+allowed to cross over max twice (No-Yes-No). 
 
 #### Competing risk
 
 The analyses were also performed using a sub-distributional hazards model [@fg] 
-were death was treated as a competing event. In addition, cumulative incidence 
-curves are presented were death is treated as a competing event. 
+were death was treated as a competing event. 
 
 ```{r, child = "../src/km.Rmd"}
-
-```
-
-Note to self: N at risk under curve?
-
-```{r, child = "../src/cuminc.Rmd"}
 
 ```
 
@@ -225,26 +187,36 @@ Note to self: N at risk under curve?
 
 ```
 
-### Subgroups
+### Subgroups EF
 
-QUESTION: Worried about small numbers... I think we should skip subgroup analyses if not VERY important. 
+Performed on the patients in the full cohort. Adjusted for the 
+individual variables in the model.  
 
-### SGLT2 vs other antidiabetic treatments
+```{r, child = "../src/outtabsubef.Rmd"}
 
-QUESTION: Need to discuss based on tab 1. 
+```
+
+### Metformin
+
+Performed on the patients in the full cohort with sglt2 use. Adjusted for the 
+individual variables in the model.  
+
+```{r, child = "../src/outtabsubmetformin.Rmd"}
+
+```
 
 ### Assumptions
 
 The proportional hazards assumption was investigated using the scaled Schoenfeld 
-residuals (cox.zph in [@survival-package]) for the primary and secondary outcome 
-in the ps matched cohort (bbl according to ITT). 
+residuals (cox.zph in [@survival-package]) for the primary outcome 
+in the ps matched cohort (sglt2 according to ITT). 
 Possible outliers were visually inspected by plotting the dfbetas. 
+=> `r paste0(stratavars, collapse = ", ")` were deemed not to have proportional 
+hazards and therefore stratified for in the cox regressions.  
 
 # Reproducibility
 
 ## R session information {#sessioninfo}
-
-`r sessionInfo()$R.version$version.string` [@r] is used, for more details see below.
 
 ```{r sessinfo}
 sessionInfo()
@@ -252,7 +224,7 @@ sessionInfo()
 
 ## R code
 
-The R code for all data handling and statistical analyses are found: XXX. On publication
+The R code for all data handling and statistical analyses are found: https://github.com/KIHeartFailure/sglt2. On publication
 the repository will be made public so as to 
 link to it from the resulting article for increased transparency and code sharing.
 No data or output is stored in the repository. 
