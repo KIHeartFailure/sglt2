@@ -45,7 +45,7 @@ survmy <- function(time = NULL, time1, time2, event, eventname, data, matched = 
 
     tmpdata <- tmpdata %>%
       mutate(eventcount = if_else(!!sym(event) == "Yes", 1, 0))
-    
+
     ev <- by(tmpdata$eventcount, tmpdata[, "ddr_sglt2"], sum)
     s <- by(tmpdata[, time], tmpdata[, "ddr_sglt2"], sum) / 365.25
     r <- pois.exact(x = ev, pt = s / 1000)
@@ -75,12 +75,10 @@ survmy <- function(time = NULL, time1, time2, event, eventname, data, matched = 
       ))
 
       # adjusted individual covariates
-      amod <- my.coxph.mids(formula(paste0(
+      amod <- with(imp, coxph(formula(paste0(
         "Surv(", time, ",", event, " == 'Yes') ~ ddr_sglt2 +",
         paste(modvarsstrata, collapse = " + ")
-      )),
-      data = imp
-      )
+      ))))
 
       ## df the number of events minus the regression coefficients.
       ## There is support for this from middle of page 149 of the book by Parmer & Machin (ISBN 0471936405)
@@ -242,7 +240,7 @@ survmy2 <- function(time2, event2, eventname2,
 
   all <- rbind(
     out1, empty_func(ifelse(!is.null(event_comp), 2, 1)),
-    out1_30, out1_60, out1_90, out1_365 
+    out1_30, out1_60, out1_90, out1_365
   )
   if (!is.null(event_comp)) {
     match <- rbind(
@@ -344,9 +342,10 @@ footnote(mykable(outall,
 ) %>%
   landscape() %>%
   add_header_above(myHeader),
-  general = c(
-    "Incidence =  no events, sum py, rate/1000py (95% CI).",
-    "Adj (ind vars) = Adjusted for the individual variables indicated in the baseline table.",
-    "Adj (ps) = Adjusted for the propensity scrore as a covariate using a cubic spline with 4 df in All data./Including the matched pairs as a frailty term in the Matched data."
-  ))
+general = c(
+  "Incidence =  no events, sum py, rate/1000py (95% CI).",
+  "Adj (ind vars) = Adjusted for the individual variables indicated in the baseline table.",
+  "Adj (ps) = Adjusted for the propensity scrore as a covariate using a cubic spline with 4 df in All data./Including the matched pairs as a frailty term in the Matched data."
+)
+)
 ```

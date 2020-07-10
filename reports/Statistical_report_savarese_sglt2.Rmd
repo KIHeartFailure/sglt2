@@ -187,19 +187,18 @@ were death was treated as a competing event.
 
 ```
 
-### Subgroups EF
+### Subgroups
 
 Performed on the patients in the full cohort. Adjusted for the 
 individual variables in the model.  
+
+#### EF
 
 ```{r, child = "../src/outtabsubef.Rmd"}
 
 ```
 
-### Metformin
-
-Performed on the patients in the full cohort with sglt2 use. Adjusted for the 
-individual variables in the model.  
+#### Metformin
 
 ```{r, child = "../src/outtabsubmetformin.Rmd"}
 
