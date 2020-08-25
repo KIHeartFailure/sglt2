@@ -189,18 +189,11 @@ were death was treated as a competing event.
 
 ### Subgroups
 
-Performed on the patients in the full cohort. Adjusted for the 
-individual variables in the model.  
+Performed using interaction effects on the patients in the matched cohort. 
+Note that there is missing data for EF so the matching (and thereby the adjustment) 
+may therefore not be complete. 
 
-#### EF
-
-```{r, child = "../src/outtabsubef.Rmd"}
-
-```
-
-#### Metformin
-
-```{r, child = "../src/outtabsubmetformin.Rmd"}
+```{r, child = "../src/outtabsub.Rmd"}
 
 ```
 

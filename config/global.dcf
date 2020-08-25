@@ -12,7 +12,7 @@ libraries: ggplot2, purrr, dplyr, tidyr, tibble, stringr, stringi, lubridate,
             kableExtra, tableone, openxlsx,
             survival, mice, miceadds, epitools, rmeta, 
             parallel, doParallel, foreach, Matching, splines, 
-            haven, cmprsk, hfmisc, car
+            haven, cmprsk, hfmisc, car, coxme
 as_factors: FALSE
 tables_type: tibble
 attach_internal_libraries: FALSE

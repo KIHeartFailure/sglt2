@@ -1,0 +1,91 @@
+```{r outtabsub, cache=cacheon}
+survmysub <- function(time, event, eventname, xvar) {
+  levs <- levels(matchp %>% pull(!!sym(xvar)))
+
+  out <- data.frame(matrix(NA, ncol = 4, nrow = length(levs) + 1))
+  colnames(out) <- c("Outcome", "Subgroup", "HR (95% CI), p-value", "p for interaction")
+  out[1, 1] <- eventname
+
+  for (i in seq_along(levs)) {
+    mod <- coxme(formula(paste0(
+      "Surv(", time, ",",
+      event, "=='Yes') ~ ddr_sglt2 * relevel(", xvar, ", ref = '", levs[i], "') + (1 | par)"
+    )),
+    data = matchp
+    )
+
+    se <- sqrt(vcov(mod)[1])
+
+    out[1 + i, 2] <- levs[i]
+    out[1 + i, 3] <- paste0(
+      dF(exp(mod$coefficients[1]), dig = 2),
+      " (", dF(exp(mod$coefficients[1] - z05 * se), dig = 2),
+      "-", dF(exp(mod$coefficients[1] + z05 * se), dig = 2), "), ",
+      dF((1 - pnorm(abs(mod$coefficients[1] / se))) * 2, dig = 3, p = TRUE)
+    )
+
+    if (i == 1) {
+      pint <- car::Anova(mod, type = "III", test.statistic = "Wald")
+
+      out[1, 4] <- dF(pint[3, 3], dig = 3, p = TRUE)
+    }
+  }
+  return(out)
+}
+```
+
+```{r outtabsubef, cache=cacheon, dependson="outtabsub"}
+cvdeathhfhosp <- survmysub(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_deathcvhosphf",
+  eventname = "CVD/1 HF hosp",
+  xvar = "shf_ef_cat"
+)
+
+deathhfhosp <- survmysub(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_deathhosphf",
+  eventname = "All-cause mortality/1 HF hosp",
+  xvar = "shf_ef_cat"
+)
+
+outall <- rbind(
+  cvdeathhfhosp,
+  deathhfhosp
+)
+
+write.xlsx(outall, paste0("./output/tabs/outtabsubgroupef_", Sys.Date(), ".xlsx"), rowNames = FALSE)
+
+mykable(outall,
+  fontsize = 6,
+  caption = "Outcomes - Subgroup EF"
+)
+```
+
+```{r outtabsubmet, cache=cacheon, dependson="outtabsub"}
+cvdeathhfhosp <- survmysub(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_deathcvhosphf",
+  eventname = "CVD/1 HF hosp",
+  xvar = "ddr_metformin"
+)
+
+deathhfhosp <- survmysub(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_deathhosphf",
+  eventname = "All-cause mortality/1 HF hosp",
+  xvar = "ddr_metformin"
+)
+
+outall <- rbind(
+  cvdeathhfhosp,
+  deathhfhosp
+)
+
+write.xlsx(outall, paste0("./output/tabs/outtabmetformin_", Sys.Date(), ".xlsx"), rowNames = FALSE)
+
+mykable(outall,
+  fontsize = 6,
+  caption = "Outcomes - Subgroup metformin"
+)
+```
