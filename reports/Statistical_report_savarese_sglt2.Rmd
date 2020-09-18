@@ -59,6 +59,16 @@ mykable(flow, caption = "Flowchart")
 
 First patient in: `r min(pdata$shf_indexdtm)` and last patient in: `r max(pdata$shf_indexdtm)`.  
 
+The median age (IQR) is `r pdata %>% summarise(med = dF(median(shf_age), dig = 1),
+                                             q1 = dF(quantile(shf_age, probs = 0.25), dig = 1),
+                                             q3 = dF(quantile(shf_age, probs = 0.75), dig = 1)) %>%
+                                   mutate(out = paste0(med, " (", q1, "-", q3, ")")) %>%
+                                   pull(out)` and 
+`r pdata %>% count(shf_sex) %>%
+  mutate(perc = dF(n / sum(n) * 100, 1)) %>%
+  filter(shf_sex == "Female") %>%
+  pull(perc)`% females.    
+
 ## Created variables 
 
 ```{r outcodes}
@@ -97,6 +107,9 @@ standardized mean differences.
 1:3 has deemed the best option when taking into account the number of patients retained.
 Other matching ratios: `r matchingn`.
 
+\clearpage
+\newpage 
+
 ## SGLT2 over time
 
 The denominator is the population in the main analysis (N = `r nrow(pdata)`). 
@@ -107,6 +120,20 @@ at index in SwedeHF, for example 2017, might still be included in the numerator 
 ```{r, child = "../src/overtime.Rmd"}
 
 ```
+
+\clearpage
+\newpage 
+
+The table shows the last dispension within 5 months prior to 2018-12-31 for all 
+patients (also those NOT on sglt2 at index). Patients that die/emigrate are 
+considered not to be available. 
+
+```{r, child = "../src/sglt2end.Rmd"}
+
+```
+
+\clearpage
+\newpage 
 
 ## Baseline characteristics
 

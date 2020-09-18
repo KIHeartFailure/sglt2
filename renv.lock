@@ -831,10 +831,10 @@
     },
     "tinytex": {
       "Package": "tinytex",
-      "Version": "0.15",
+      "Version": "0.25",
       "Source": "CRAN",
       "Repository": "CRAN",
-      "Hash": "11c9260eb54db1f55e7573844c2ae8ed"
+      "Hash": "3584f01de69e88d9b89f5ec5548ae995"
     },
     "utf8": {
       "Package": "utf8",

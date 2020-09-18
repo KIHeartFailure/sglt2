@@ -1,0 +1,9 @@
+```{r tabsglt2end, cache=cacheon}
+
+sglt2end <- pdata %>% count(ddr_sglt2, available_at_end_study, ddr_sglt2_end)
+
+
+mykable(sglt2end,
+  caption = "SGLT2 at end of study"
+)
+```

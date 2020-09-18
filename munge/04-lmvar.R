@@ -1,7 +1,10 @@
 
 # Antidiabetic treatments from DDR ----------------------------------------
 
-lmtmp <- left_join(pdata, lm, by = "LopNr")
+lmtmp <- left_join(pdata %>% select(LopNr, shf_indexdtm),
+  lm,
+  by = "LopNr"
+)
 
 lmtreats <- function(atc, treatname) {
   lmtmp2 <- lmtmp %>%
@@ -78,6 +81,45 @@ metalm <- metalm %>%
     Period = "-5mo-14days",
   )
 
+
+# SGLT2 at end of study ---------------------------------------------------
+
+lmtmp2 <- lmtmp %>%
+  mutate(
+    atcneed = stringr::str_detect(ATC, "^(A10BK0[1-6]|A10BD15|A10BD16|A10BD19|A10BD20|A10BD21|A10BD23|A10BD24|A10BD25|A10BX09|A10BX11|A10BX12)"),
+    diff = as.numeric(EDATUM - ymd("2018-12-31"))
+  ) %>%
+  filter(
+    atcneed,
+    diff >= -30.5 * 5, diff <= 0
+  ) %>%
+  group_by(LopNr) %>%
+  arrange(EDATUM) %>%
+  slice(n()) %>%
+  ungroup() %>%
+  mutate(ddr_sglt2_end = case_when(
+    stringr::str_detect(ATC, "^(A10BK01|A10BD15|A10BD21|A10BD25)") ~ "Dapagliflozin",
+    stringr::str_detect(ATC, "^(A10BK02|A10BD16)") ~ "Canagliflozin",
+    stringr::str_detect(ATC, "^(A10BK03|A10BD19|A10BD20)") ~ "Empagliflozin",
+    stringr::str_detect(ATC, "^(A10BK04|A10BD23|A10BD24)") ~ "Ertugliflozin",
+    stringr::str_detect(ATC, "^A10BK05") ~ "Ipragliflozin",
+    stringr::str_detect(ATC, "^A10BK06") ~ "Sotagliflozin",
+    TRUE ~ "Other"
+  )) %>%
+  select(LopNr, ddr_sglt2_end)
+
+
+pdata <- left_join(pdata,
+  lmtmp2,
+  by = "LopNr"
+) %>%
+  mutate(
+    ddr_sglt2_end = replace_na(ddr_sglt2_end, "No"),
+    available_at_end_study = case_when(
+      shf_indexdtm + sos_outtime_death >= ymd("2018-12-31") ~ "Yes",
+      TRUE ~ "No"
+    )
+  )
 
 # Overtime graph ----------------------------------------------------------
 
