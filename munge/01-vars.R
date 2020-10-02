@@ -5,6 +5,7 @@
 
 tabvars <- c(
   # demo
+  "shf_indexyearquarter",
   "shf_sex",
   "shf_age",
   "shf_age_cat",
@@ -86,6 +87,8 @@ tabvars <- c(
 
 # vars fox log reg and cox reg
 tabvars_not_in_mod <- c(
+  "shf_indexyearquarter",
+  
   "shf_age",
 
   "shf_nyha",

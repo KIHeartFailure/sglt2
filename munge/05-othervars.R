@@ -4,6 +4,10 @@
 
 pdata <- pdata %>%
   mutate(
+    
+    shf_quarter = quarter(shf_indexdtm), 
+    shf_indexyearquarter = paste0(shf_indexyear, ":", shf_quarter),
+      
     shf_age_cat = case_when(
       shf_age < 75 ~ "<75",
       shf_age >= 75 ~ ">=75"

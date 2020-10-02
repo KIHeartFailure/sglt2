@@ -54,7 +54,7 @@ SHFDB3, https://kiheartfailure.github.io/shfdb3/, v 3.1.2.
 ## Inclusion/exclusion criteria
 
 ```{r flow}
-mykable(flow, caption = "Flowchart")
+mykable(flow, caption = "Flowchart", scale_down = FALSE)
 ```
 
 First patient in: `r min(pdata$shf_indexdtm)` and last patient in: `r max(pdata$shf_indexdtm)`.  
@@ -72,7 +72,7 @@ The median age (IQR) is `r pdata %>% summarise(med = dF(median(shf_age), dig = 1
 ## Created variables 
 
 ```{r outcodes}
-mykable(metaout, caption = "Additional outcomes from NPR")
+mykable(metaout, caption = "Additional outcomes from NPR", scale_down = FALSE)
 ```
 
 ```{r atc}
@@ -124,9 +124,8 @@ at index in SwedeHF, for example 2017, might still be included in the numerator 
 \clearpage
 \newpage 
 
-The table shows the last dispension within 5 months prior to 2018-12-31 for all 
-patients (also those NOT on sglt2 at index). Patients that die/emigrate are 
-considered not to be available. 
+The table shows the last dispension during 2018 for all 
+patients (also those NOT on sglt2 at index).  
 
 ```{r, child = "../src/sglt2end.Rmd"}
 
@@ -193,7 +192,7 @@ time-dependent variable in the model.
 
 In patients treated with sglt2 at baseline the patient was assumed to be on sglt2 
 until LAST dispension + 3 months or end of follow-up 
-(death/emigration/2018-08-01/event) - 5 months independent of how 
+(death/emigration/2018-12-31/event) - 5 months independent of how 
 long time between dispensions. In untreated patients, crossover was defined 
 as a new sglt2 dispension in the Dispensed Drug Registry and 
 thereafter in the same manner as for patients treated with sglt2 at baseline. 
@@ -204,7 +203,30 @@ allowed to cross over max twice (No-Yes-No).
 #### Competing risk
 
 The analyses were also performed using a sub-distributional hazards model [@fg] 
-were death was treated as a competing event. 
+were death was treated as a competing event.
+
+\clearpage
+\newpage
+
+Summary stats for time to primary outcome/death/emigration/end of follow-up: 
+
+Overall cohort: The median (IQR) follow-up is 
+`r pdata %>% summarise(med = dF(median(sos_outtime_hosphf), dig = 0),
+                                             q1 = dF(quantile(sos_outtime_hosphf, probs = 0.25), dig = 0),
+                                             q3 = dF(quantile(sos_outtime_hosphf, probs = 0.75), dig = 0)) %>%
+                                   mutate(out = paste0(med, " (", q1, "-", q3, ")")) %>%
+                                   pull(out)` for a total of 
+                                   `r pdata %>% summarise(sumpy = dF(sum(sos_outtime_hosphf) / 365.25, dig = 0)) %>%
+                                   pull(sumpy)` patient-years of follow-up.
+                                   
+Matched cohort: The median (IQR) follow-up is 
+`r matchp %>% summarise(med = dF(median(sos_outtime_hosphf), dig = 0),
+                                             q1 = dF(quantile(sos_outtime_hosphf, probs = 0.25), dig = 0),
+                                             q3 = dF(quantile(sos_outtime_hosphf, probs = 0.75), dig = 0)) %>%
+                                   mutate(out = paste0(med, " (", q1, "-", q3, ")")) %>%
+                                   pull(out)` for a total of 
+                                   `r matchp %>% summarise(sumpy = dF(sum(sos_outtime_hosphf) / 365.25, dig = 0)) %>%
+                                   pull(sumpy)` patient-years of follow-up.
 
 ```{r, child = "../src/km.Rmd"}
 

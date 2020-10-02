@@ -81,18 +81,11 @@ metalm <- metalm %>%
     Period = "-5mo-14days",
   )
 
-
 # SGLT2 at end of study ---------------------------------------------------
 
 lmtmp2 <- lmtmp %>%
-  mutate(
-    atcneed = stringr::str_detect(ATC, "^(A10BK0[1-6]|A10BD15|A10BD16|A10BD19|A10BD20|A10BD21|A10BD23|A10BD24|A10BD25|A10BX09|A10BX11|A10BX12)"),
-    diff = as.numeric(EDATUM - ymd("2018-12-31"))
-  ) %>%
-  filter(
-    atcneed,
-    diff >= -30.5 * 5, diff <= 0
-  ) %>%
+  mutate(atcneed = stringr::str_detect(ATC, "^(A10BK0[1-6]|A10BD15|A10BD16|A10BD19|A10BD20|A10BD21|A10BD23|A10BD24|A10BD25|A10BX09|A10BX11|A10BX12)")) %>%
+  filter(atcneed, AR == 2018) %>%
   group_by(LopNr) %>%
   arrange(EDATUM) %>%
   slice(n()) %>%
@@ -127,6 +120,6 @@ overtime <- lmtmp %>%
   mutate(atcneed = stringr::str_detect(ATC, "^(A10BK0[1-6]|A10BD15|A10BD16|A10BD19|A10BD20|A10BD21|A10BD23|A10BD24|A10BD25|A10BX09|A10BX11|A10BX12)")) %>%
   filter(atcneed) %>%
   group_by(LopNr, AR) %>%
-  slice(1) %>%
+  slice(n()) %>%
   ungroup() %>%
   count(AR)
