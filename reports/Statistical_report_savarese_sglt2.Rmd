@@ -112,22 +112,13 @@ Other matching ratios: `r matchingn`.
 
 ## SGLT2 over time
 
-The denominator is the population in the main analysis (N = `r nrow(pdata)`). 
-The numerator consists of the number of patients that have at least one sglt2 
-prescription. The calculation is done per year, so a patient without sglt2 
-at index in SwedeHF, for example 2017, might still be included in the numerator for example for 2013 or 2018.  
+The denominator consists of persons that at the 
+middle of the year were present in SHFDB3 with type II diabetes 
+(so included in SwedeHF prior to 20xx-07-01 but not dead/emigrated as of 20xx-07-01). 
+The numerator consists of the number of patients of the above with at least one sglt2 
+dispension during that year.  
 
 ```{r, child = "../src/overtime.Rmd"}
-
-```
-
-\clearpage
-\newpage 
-
-The table shows the last dispension during 2018 for all 
-patients (also those NOT on sglt2 at index).  
-
-```{r, child = "../src/sglt2end.Rmd"}
 
 ```
 
@@ -200,6 +191,19 @@ That means that patients with sglt2 at baseline were allowed to cross
 over max once (Yes-No) and patients without sglt2 at baseline were 
 allowed to cross over max twice (No-Yes-No). 
 
+No of cross-overs (until death): 
+
+`r mykable(inner_join(matchp,
+  matchpcross_death %>%
+    group_by(LopNr) %>%
+    slice(2) %>%
+    ungroup() %>%
+    select(LopNr),
+  by = "LopNr"
+) %>%
+  count(ddr_sglt2), 
+  scale_down = FALSE)`
+
 #### Competing risk
 
 The analyses were also performed using a sub-distributional hazards model [@fg] 
@@ -239,7 +243,7 @@ Matched cohort: The median (IQR) follow-up is
 ### Subgroups
 
 Performed using interaction effects on the patients in the matched cohort. 
-Note that there is missing data for EF so the matching (and thereby the adjustment) 
+Note that there is missing data for EF/eGFR so the matching (and thereby the adjustment) 
 may therefore not be complete. 
 
 ```{r, child = "../src/outtabsub.Rmd"}

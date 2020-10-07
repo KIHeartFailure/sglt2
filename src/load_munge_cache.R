@@ -27,6 +27,7 @@ ProjectTemplate::cache("metalm")
 ProjectTemplate::cache("metaout")
 ProjectTemplate::cache("matchingn")
 ProjectTemplate::cache("overtime")
+ProjectTemplate::cache("lm2018")
 
 ProjectTemplate::cache("tabvars")
 ProjectTemplate::cache("modvars")

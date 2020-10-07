@@ -89,3 +89,35 @@ mykable(outall,
   caption = "Outcomes - Subgroup metformin"
 )
 ```
+
+```{r outtabsubgfr, cache=cacheon, dependson="outtabsub"}
+matchp <- matchp %>%
+  mutate(shf_ckd2 = factor(case_when(shf_ckd %in% c("30-60", "<30") ~ "<60", 
+                              shf_ckd %in% c(">=60") ~ ">=60")))
+
+cvdeathhfhosp <- survmysub(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_deathcvhosphf",
+  eventname = "CVD/1 HF hosp",
+  xvar = "shf_ckd2"
+)
+
+deathhfhosp <- survmysub(
+  time = "sos_outtime_hosphf",
+  event = "sos_out_deathhosphf",
+  eventname = "All-cause mortality/1 HF hosp",
+  xvar = "shf_ckd2"
+)
+
+outall <- rbind(
+  cvdeathhfhosp,
+  deathhfhosp
+)
+
+write.xlsx(outall, paste0("./output/tabs/outtabsubgroupgfr_", Sys.Date(), ".xlsx"), rowNames = FALSE)
+
+mykable(outall,
+  fontsize = 6,
+  caption = "Outcomes - Subgroup eGFR"
+)
+```

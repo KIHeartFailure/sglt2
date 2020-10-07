@@ -81,11 +81,64 @@ metalm <- metalm %>%
     Period = "-5mo-14days",
   )
 
+
+# Overtime graph ----------------------------------------------------------
+
+popovertime <- rsdata312 %>%
+  filter(casecontrol == "Case",
+         shf_diabetestype == "Type II",
+         shf_indexdtm >= ymd("2010-01-01")) %>%
+  mutate(censdtm = shf_indexdtm + sos_outtime_death) %>%
+  group_by(LopNr) %>%
+  arrange(shf_indexdtm) %>%
+  slice(1) %>%
+  ungroup() %>%
+  select(LopNr, shf_indexdtm, censdtm)
+
+lmovertime <- lm %>%
+  mutate(atcneed = stringr::str_detect(ATC, "^(A10BK0[1-6]|A10BD15|A10BD16|A10BD19|A10BD20|A10BD21|A10BD23|A10BD24|A10BD25|A10BX09|A10BX11|A10BX12)")) %>%
+  filter(atcneed)
+  
+overtimefunc <- function(year){
+  yearmid <- paste0(year, "-7-01")
+  
+  popyear <- popovertime %>%
+    filter(shf_indexdtm <= ymd(yearmid),
+           censdtm >= ymd(yearmid))
+  
+  lmyear <- inner_join(popyear, 
+                      lmovertime %>%
+                        filter(AR == year), 
+                      by = "LopNr") %>%
+    group_by(LopNr) %>%
+    slice(1) %>%
+    ungroup()
+  
+  out <- c(year = year, den = popyear %>% count() %>% pull(n), num = lmyear %>% count() %>% pull(n))
+}
+
+overtime <- overtimefunc(2013)
+overtime <- rbind(overtime, overtimefunc(2014))
+overtime <- rbind(overtime, overtimefunc(2015))
+overtime <- rbind(overtime, overtimefunc(2016))
+overtime <- rbind(overtime, overtimefunc(2017))
+overtime <- rbind(overtime, overtimefunc(2018))
+
+overtime <- overtime %>%
+  as.data.frame() %>%
+  mutate(percent = num / den * 100) 
+
+
 # SGLT2 at end of study ---------------------------------------------------
 
-lmtmp2 <- lmtmp %>%
-  mutate(atcneed = stringr::str_detect(ATC, "^(A10BK0[1-6]|A10BD15|A10BD16|A10BD19|A10BD20|A10BD21|A10BD23|A10BD24|A10BD25|A10BX09|A10BX11|A10BX12)")) %>%
-  filter(atcneed, AR == 2018) %>%
+popyear <- popovertime %>%
+  filter(shf_indexdtm <= ymd("2018-07-01"),
+         censdtm >= ymd("2018-07-01"))
+
+lm2018 <- inner_join(popyear, 
+                     lmovertime %>%
+                       filter(AR == 2018), 
+                     by = "LopNr") %>%
   group_by(LopNr) %>%
   arrange(EDATUM) %>%
   slice(n()) %>%
@@ -100,26 +153,3 @@ lmtmp2 <- lmtmp %>%
     TRUE ~ "Other"
   )) %>%
   select(LopNr, ddr_sglt2_end)
-
-
-pdata <- left_join(pdata,
-  lmtmp2,
-  by = "LopNr"
-) %>%
-  mutate(
-    ddr_sglt2_end = replace_na(ddr_sglt2_end, "No"),
-    available_at_end_study = case_when(
-      shf_indexdtm + sos_outtime_death >= ymd("2018-12-31") ~ "Yes",
-      TRUE ~ "No"
-    )
-  )
-
-# Overtime graph ----------------------------------------------------------
-
-overtime <- lmtmp %>%
-  mutate(atcneed = stringr::str_detect(ATC, "^(A10BK0[1-6]|A10BD15|A10BD16|A10BD19|A10BD20|A10BD21|A10BD23|A10BD24|A10BD25|A10BX09|A10BX11|A10BX12)")) %>%
-  filter(atcneed) %>%
-  group_by(LopNr, AR) %>%
-  slice(n()) %>%
-  ungroup() %>%
-  count(AR)
