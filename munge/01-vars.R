@@ -4,6 +4,7 @@
 
 
 tabvars <- c(
+  "ddr_sglt2prevusers",
   # demo
   "shf_indexyearquarter",
   "shf_sex",
@@ -77,6 +78,7 @@ tabvars <- c(
   "sos_com_liver",
   "sos_com_cancer3y",
   "sos_com_copd",
+  "sos_com_dialysis",
 
   # socec
   "scb_famtype",
@@ -87,6 +89,7 @@ tabvars <- c(
 
 # vars fox log reg and cox reg
 tabvars_not_in_mod <- c(
+  "ddr_sglt2prevusers",
   "shf_indexyearquarter",
   
   "shf_age",
@@ -106,6 +109,8 @@ tabvars_not_in_mod <- c(
   "shf_bmi_cat",
 
   "shf_smoking",
+  
+  "sos_com_dialysis",
 
   "ddr_agi",
   "ddr_thiazolidinediones",

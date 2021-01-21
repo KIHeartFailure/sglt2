@@ -82,6 +82,33 @@ metalm <- metalm %>%
   )
 
 
+# New/prevalent users -----------------------------------------------------
+
+lmprevusers <- lmtmp %>%
+  mutate(
+    atcneed = stringr::str_detect(ATC, "^(A10BK0[1-6]|A10BD15|A10BD16|A10BD19|A10BD20|A10BD21|A10BD23|A10BD24|A10BD25|A10BX09|A10BX11|A10BX12)"),
+    diff = as.numeric(EDATUM - shf_indexdtm)
+  ) %>%
+  filter(
+    atcneed,
+    diff < -30.5 * 5
+  )
+
+lmprevusers <- lmprevusers %>%
+  group_by(LopNr) %>%
+  slice(1) %>%
+  ungroup() %>%
+  mutate(ddr_sglt2prevusers = "Yes") %>%
+  select(LopNr, ddr_sglt2prevusers)
+
+pdata <- left_join(pdata,
+                    lmprevusers,
+                    by = "LopNr"
+) %>%
+  mutate(ddr_sglt2prevusers = case_when(ddr_sglt2 == "No" ~ NA_character_, 
+                                        is.na(ddr_sglt2prevusers) ~ "No", 
+                                        TRUE ~ ddr_sglt2prevusers))
+
 # Overtime graph ----------------------------------------------------------
 
 popovertime <- rsdata312 %>%

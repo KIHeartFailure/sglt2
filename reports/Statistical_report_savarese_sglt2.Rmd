@@ -75,6 +75,9 @@ The median age (IQR) is `r pdata %>% summarise(med = dF(median(shf_age), dig = 1
 mykable(metaout, caption = "Additional outcomes from NPR", scale_down = FALSE)
 ```
 
+Prevalent users of sglt2 are defined as patients with a dispensed prescription for sglt2
+prior to 5 months. 
+
 ```{r atc}
 mykable(metalm, caption = "Treatments from DDR")
 ```
