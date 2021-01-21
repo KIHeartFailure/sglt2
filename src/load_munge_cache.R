@@ -22,6 +22,7 @@ ProjectTemplate::cache("matchpcross_deathcv")
 ProjectTemplate::cache("matchpcross_hosphf")
 ProjectTemplate::cache("matchpcross_hospcv")
 ProjectTemplate::cache("matchpcross_deathcvhospmistroke")
+ProjectTemplate::cache("matchpcross_hospbleed")
 
 ProjectTemplate::cache("metalm")
 ProjectTemplate::cache("metaout")

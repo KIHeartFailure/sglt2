@@ -319,6 +319,14 @@ cvdmis <- survmy2(
   event_comp = "sos_out_deathcvhospmistroke_comp"
 )
 
+bleed <- survmy2(
+  time2 = "sos_outtime_hospbleed",
+  event2 = "sos_out_hospbleed",
+  eventname2 = "Negative control - bleed",
+  crossoverdata = matchpcross_hospbleed,
+  event_comp = "sos_out_hospbleed_comp"
+)
+
 outall <- rbind(
   cvdeathhfhosp,
   deathhfhosp,
@@ -326,7 +334,8 @@ outall <- rbind(
   cvdeath,
   hfhosp,
   cvhosp,
-  cvdmis
+  cvdmis, 
+  bleed
 )
 
 

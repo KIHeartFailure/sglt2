@@ -154,6 +154,11 @@ pdata <- pdata %>%
       sos_out_deathcvhospmistroke == "Yes" ~ 1,
       sos_out_death == "Yes" ~ 2,
       TRUE ~ 0
+    ),
+    sos_out_hospbleed_comp = case_when(
+      sos_out_hospbleed == "Yes" ~ 1,
+      sos_out_death == "Yes" ~ 2,
+      TRUE ~ 0
     )
   )
 
@@ -203,6 +208,11 @@ cutout("sos_out_deathcvhospmistroke", "sos_outtime_hospmistroke", timepoint = 30
 cutout("sos_out_deathcvhospmistroke", "sos_outtime_hospmistroke", timepoint = 60)
 cutout("sos_out_deathcvhospmistroke", "sos_outtime_hospmistroke", timepoint = 90)
 cutout("sos_out_deathcvhospmistroke", "sos_outtime_hospmistroke", timepoint = 365)
+
+cutout("sos_out_hospbleed", "sos_outtime_hospbleed", timepoint = 30)
+cutout("sos_out_hospbleed", "sos_outtime_hospbleed", timepoint = 60)
+cutout("sos_out_hospbleed", "sos_outtime_hospbleed", timepoint = 90)
+cutout("sos_out_hospbleed", "sos_outtime_hospbleed", timepoint = 365)
 
 # income
 

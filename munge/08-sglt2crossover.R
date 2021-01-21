@@ -111,3 +111,7 @@ matchpcross_deathcvhospmistroke <- crossoverfunc(
   time = "sos_outtime_hospmistroke",
   event = "sos_out_deathcvhospmistroke"
 )
+matchpcross_hospbleed <- crossoverfunc(
+  time = "sos_outtime_hospbleed",
+  event = "sos_out_hospbleed"
+)
