@@ -2,11 +2,40 @@
 survmysub <- function(time, event, eventname, xvar) {
   levs <- levels(matchp %>% pull(!!sym(xvar)))
 
-  out <- data.frame(matrix(NA, ncol = 4, nrow = length(levs) + 1))
-  colnames(out) <- c("Outcome", "Subgroup", "HR (95% CI), p-value", "p for interaction")
+  out <- data.frame(matrix(NA, ncol = 6, nrow = length(levs) * 2 + 1))
+  colnames(out) <- c("Outcome", "Subgroup", "Model", "SGLT2 No", "SGLT2 Yes", "p for interaction")
   out[1, 1] <- eventname
 
+  out[seq(2, (length(levs) * 2), 2), 3] <- "Incidence"
+  out[seq(3, (length(levs) * 2 + 1), 2), 3] <- "HR (95% CI), p-value"
+
   for (i in seq_along(levs)) {
+    out[i * 2, 2] <- levs[i]
+
+    ev <- matchp %>%
+      filter(!!sym(xvar) == levs[i]) %>%
+      group_by(ddr_sglt2) %>%
+      summarise(
+        ev = sum(!!sym(event) == "Yes"),
+        .groups = "drop"
+      )
+    s <- matchp %>%
+      filter(!!sym(xvar) == levs[i]) %>%
+      group_by(ddr_sglt2) %>%
+      summarise(
+        s = sum(!!sym(time) / 365.25),
+        .groups = "drop"
+      )
+    r <- pois.exact(x = ev$ev, pt = s$s / 1000)
+
+    out[i * 2, 4:5] <- paste0(
+      ev$ev, ", ",
+      dF(s$s, dig = 0), ", ",
+      dF(r$rate, dig = 0), " (",
+      dF(r$lower, dig = 0), "-",
+      dF(r$upper, dig = 0), ")"
+    )
+
     mod <- coxme(formula(paste0(
       "Surv(", time, ",",
       event, "=='Yes') ~ ddr_sglt2 * relevel(", xvar, ", ref = '", levs[i], "') + (1 | par)"
@@ -16,18 +45,17 @@ survmysub <- function(time, event, eventname, xvar) {
 
     se <- sqrt(vcov(mod)[1])
 
-    out[1 + i, 2] <- levs[i]
-    out[1 + i, 3] <- paste0(
+    out[i * 2 + 1, 4:5] <- c("ref", paste0(
       dF(exp(mod$coefficients[1]), dig = 2),
       " (", dF(exp(mod$coefficients[1] - z05 * se), dig = 2),
       "-", dF(exp(mod$coefficients[1] + z05 * se), dig = 2), "), ",
       dF((1 - pnorm(abs(mod$coefficients[1] / se))) * 2, dig = 3, p = TRUE)
-    )
+    ))
 
     if (i == 1) {
       pint <- car::Anova(mod, type = "III", test.statistic = "Wald")
 
-      out[1, 4] <- dF(pint[3, 3], dig = 3, p = TRUE)
+      out[1, 6] <- dF(pint[3, 3], dig = 3, p = TRUE)
     }
   }
   return(out)
@@ -56,9 +84,11 @@ outall <- rbind(
 
 write.xlsx(outall, paste0("./output/tabs/outtabsubgroupef_", Sys.Date(), ".xlsx"), rowNames = FALSE)
 
-mykable(outall,
+footnote(mykable(outall,
   fontsize = 6,
   caption = "Outcomes - Subgroup EF"
+),
+general = c("Incidence =  no events, sum py, rate/1000py (95% CI).")
 )
 ```
 
@@ -84,16 +114,20 @@ outall <- rbind(
 
 write.xlsx(outall, paste0("./output/tabs/outtabmetformin_", Sys.Date(), ".xlsx"), rowNames = FALSE)
 
-mykable(outall,
+footnote(mykable(outall,
   fontsize = 6,
   caption = "Outcomes - Subgroup metformin"
+),
+general = c("Incidence =  no events, sum py, rate/1000py (95% CI).")
 )
 ```
 
 ```{r outtabsubgfr, cache=cacheon, dependson="outtabsub"}
 matchp <- matchp %>%
-  mutate(shf_ckd2 = factor(case_when(shf_ckd %in% c("30-60", "<30") ~ "<60", 
-                              shf_ckd %in% c(">=60") ~ ">=60")))
+  mutate(shf_ckd2 = factor(case_when(
+    shf_ckd %in% c("30-60", "<30") ~ "<60",
+    shf_ckd %in% c(">=60") ~ ">=60"
+  )))
 
 cvdeathhfhosp <- survmysub(
   time = "sos_outtime_hosphf",
@@ -116,8 +150,10 @@ outall <- rbind(
 
 write.xlsx(outall, paste0("./output/tabs/outtabsubgroupgfr_", Sys.Date(), ".xlsx"), rowNames = FALSE)
 
-mykable(outall,
+footnote(mykable(outall,
   fontsize = 6,
   caption = "Outcomes - Subgroup eGFR"
+),
+general = c("Incidence =  no events, sum py, rate/1000py (95% CI).")
 )
 ```
